@@ -31,8 +31,18 @@ services:
   #     monitoring:
   #       ipv4_address: 172.20.0.4
 
-  custom_exporter:
-    build: app
+  traffic_generator:
+    build: load
+    container_name: traffic_generator
+    restart: unless-stopped
+    environment:
+      WEBSITE_IP: '172.20.0.5'
+    networks:
+      monitoring:
+        ipv4_address: 172.20.0.4
+
+  website:
+    build: website
     container_name: exporter
     restart: unless-stopped
     ports: 

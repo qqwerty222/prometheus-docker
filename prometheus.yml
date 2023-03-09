@@ -7,6 +7,6 @@ global:
 #   - targets: ['172.20.0.4:9100']
 
 scrape_configs:
-  - job_name: custom
+  - job_name: website
     static_configs:
     - targets: ['172.20.0.5:8000']
