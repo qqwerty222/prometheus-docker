@@ -1,4 +1,4 @@
-from flask import Response, Flask, request
+from flask import Response, Flask
 import prometheus_client 
 from prometheus_client.core import CollectorRegistry
 from prometheus_client import Summary, Counter, Histogram, Gauge
@@ -10,24 +10,22 @@ app = Flask(__name__)
 
 _INF = float("inf")
 
+# Define metrics to send to /metrics
 metrics = {}
-metrics['http_requests']  = Counter('http_requests', 'Total number of requests', ['status'])
-metrics['request_latency'] = Histogram('http_request_duration_seconds', 'Histogram for the duration in seconds', buckets=(0.1, 0.2, 0.25, 0.5, 1, _INF))
+metrics['request']                  = Counter('http_request', 'Total number of requests', ['endpoint', 'status'])
+metrics['request_latency_bucket']   = Histogram('http_request_duration_seconds', 'Histogram for the duration in seconds', ['endpoint', 'status'], buckets=(0.1, 0.2, 0.25, 0.5, 1, _INF))
 
+metrics['request_inflight_max']     = Gauge('http_request_inflight_max', 'Gauge for max count of request that can be operated')
+metrics['request_inflight_max'].set(10)
+
+# Page that return one of 2xx status codes
 @app.route("/code-2xx")
 def code2xx():
 
     # randomly generate status 2xx response
     index = random.randint(0, 5)
     codes = [ 200, 202, 203, 204, 205, 206 ] 
-    metrics['http_requests'].labels(status=f'{codes[index]}').inc()
-
-    # simulate request process delay
-    start = time.time()
-    delay()
-    end = time.time()
-
-    metrics['request_latency'].observe(end - start)
+    metrics['request'].labels(endpoint='/code-2xx', status=f'{codes[index]}').inc()
 
     return Response(status=codes[index])
 
@@ -35,16 +33,9 @@ def code2xx():
 def code4xx():
 
     # randomly generate status 4xx response
-    index = random.randint(0, 20)
-    codes = [ 400, 401, 402, 403, 404, 405, 406, 407, 408, 409, 410, 411, 412, 413, 414, 415, 416, 417, 428, 429, 431 ] 
-    metrics['http_requests'].labels(status=f'{codes[index]}').inc()
-
-    # simulate request process delay
-    start = time.time()
-    delay()
-    end = time.time()
-
-    metrics['request_latency'].observe(end - start)
+    index = random.randint(0, 2)
+    codes = [ 400, 401, 404 ] 
+    metrics['request'].labels(endpoint='/code-4xx', status=f'{codes[index]}').inc()
 
     return Response(status=codes[index])
 
@@ -52,41 +43,56 @@ def code4xx():
 def code5xx():
 
     # randomly generate status 5xx response
-    index = random.randint(0, 6)
-    codes = [ 500, 501, 502, 503, 504, 505, 511 ] 
-    metrics['http_requests'].labels(status=f'{codes[index]}').inc()
-
-    # simulate request process delay
-    start = time.time()
-    delay()
-    end = time.time()
-    metrics['request_latency'].observe(end - start)
+    index = random.randint(0, 2)
+    codes = [ 500, 501, 503 ] 
+    metrics['request'].labels(endpoint='/code-5xx', status=f'{codes[index]}').inc()
 
     return Response(status=codes[index])
 
-def delay():
-    num = random.randrange(0, 100)
+# Page that return 200 but with delay in 200 seconds
+@app.route("/ms-200")
+def ms200():
 
-    if num <= 5:                                
-        delay = random.uniform(0, 0.1)            # 5%  delay below  100ms
-    elif 5 < num <= 20:                         
-        delay = random.uniform(0.1, 0.2)          # 15% delay below  200ms 
-    elif 20 < num <= 60:                       
-        delay = random.uniform(0.2, 0.25)         # 40% delay below  250ms
-    elif 60 < num <= 85:                        
-        delay = random.uniform(0.25, 0.5)         # 25% delay below  500ms
-    elif 85 < num <= 95:                        
-        delay = random.uniform(0.5, 1)            # 10% delay below  1000ms
-    elif num > 95:                              
-        delay = random.uniform(1, 1.25)           # 5%  delay above  1250ms
-        
-    print(f"#------------------------------------------------------------------------------ # {num} - {delay}")
-   
-    time.sleep(delay)
-    return None
+    metrics['request'].labels(endpoint='/ms-200', status=200).inc()
+    
+    start = time.time()
+    time.sleep(random.uniform(0, 0.2))
+    end = time.time()
 
+    metrics['request_latency_bucket'].labels(endpoint='/ms-200', status=200).observe(end - start)
+
+    return Response(status=200)
+
+@app.route("/ms-500")
+def ms500():
+
+    metrics['request'].labels(endpoint='/ms-500', status=200).inc()
+    
+    start = time.time()
+    time.sleep(random.uniform(0.2, 0.5))
+    end = time.time()
+
+    metrics['request_latency_bucket'].labels(endpoint='/ms-500', status=200).observe(end - start)
+
+    return Response(status=200)
+
+@app.route("/ms-1000")
+def ms1000():
+
+    metrics['request'].labels(endpoint='/ms-1000', status=200).inc()
+    
+    start = time.time()
+    time.sleep(random.uniform(0.5, 1))
+    end = time.time()
+
+    metrics['request_latency_bucket'].labels(endpoint='/ms-1000', status=200).observe(end - start)
+
+    return Response(status=200)
+
+# Collect metrics and their values 
 @app.route("/metrics")
 def requests_count():
+    metrics['request'].labels(endpoint='/metrics', status=200).inc()
     res = []
     for key, value in metrics.items():
         res.append(prometheus_client.generate_latest(value))

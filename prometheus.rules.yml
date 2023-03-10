@@ -1,0 +1,5 @@
+groups:
+- name: request-per-second
+  rules:
+  - record: http_request_inflight_current
+    expr: sum(rate(http_request_total[1m])) by (job) 

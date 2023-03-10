@@ -57,6 +57,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus.rules.yml:/etc/prometheus/prometheus.rules.yml
       - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -71,9 +72,11 @@ services:
         ipv4_address: 172.20.0.6
 
   grafana:
-    image: grafana/grafana
+    build: grafana
     container_name: grafana
     restart: unless-stopped
+    environment:
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: '/var/lib/grafana/dashboards/dashboard.json'
     ports:
       - 3000:3000
     networks:

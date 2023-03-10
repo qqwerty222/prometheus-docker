@@ -1,12 +1,15 @@
 global:
-  scrape_interval: 15s
+  scrape_interval: 30s
 
 # scrape_configs:
 # - job_name: app
 #   static_configs:
 #   - targets: ['172.20.0.4:9100']
+rule_files:
+  - 'prometheus.rules.yml'
 
 scrape_configs:
-  - job_name: website
+  - job_name: website-prod
     static_configs:
     - targets: ['172.20.0.5:8000']
+
