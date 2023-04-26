@@ -1,4 +1,4 @@
-# Monitor website endpoint with Prometheus and Graphana
+# Monitor website endpoints with Prometheus and Graphana
 
 There is 3 services in this project:
 - traffic_generator, infinitely send requests to website endpoints

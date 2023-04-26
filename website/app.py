@@ -8,6 +8,7 @@ import time
 
 app = Flask(__name__)
 
+# infinitive value
 _INF = float("inf")
 
 # Define metrics to send to /metrics
@@ -49,7 +50,7 @@ def code5xx():
 
     return Response(status=codes[index])
 
-# Page that return 200 but with delay in 200 seconds
+# Make endpoints to simulate latency
 @app.route("/ms-200")
 def ms200():
 
